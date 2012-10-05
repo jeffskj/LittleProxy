@@ -6,7 +6,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 
 public interface RelayPipelineFactoryFactory {
 
-    ChannelPipelineFactory getRelayPipelineFactory(HttpRequest httpRequest, 
+    ChannelPipelineFactory getRelayPipelineFactory(Route route, HttpRequest httpRequest, 
         Channel browserToProxyChannel, RelayListener relayListener);
 
 }

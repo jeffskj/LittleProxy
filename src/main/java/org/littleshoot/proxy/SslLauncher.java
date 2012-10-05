@@ -34,7 +34,7 @@ public class SslLauncher {
         };
         final HttpProxyServer server = new DefaultHttpProxyServer(port, 
             responseFilters, null, 
-            new SelfSignedKeyStoreManager(), null);
+            new SelfSignedKeyStoreManager(), null, null, null);
         System.out.println("About to start...");
         server.start();
     }

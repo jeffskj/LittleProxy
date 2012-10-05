@@ -12,30 +12,34 @@ public class DefaultRelayPipelineFactoryFactory
     private final ChannelGroup channelGroup;
     private final HttpRequestFilter requestFilter;
     private final HttpResponseFilters responseFilters;
+    private final RequestRewriter rewriter;
 
     public DefaultRelayPipelineFactoryFactory(
         final ChainProxyManager chainProxyManager, 
         final HttpResponseFilters responseFilters, 
-        final HttpRequestFilter requestFilter, 
+        final HttpRequestFilter requestFilter,
+        final RequestRewriter rewriter,
         final ChannelGroup channelGroup) {
         this.chainProxyManager = chainProxyManager;
         this.responseFilters = responseFilters;
+        this.rewriter = rewriter;
         this.channelGroup = channelGroup;
         this.requestFilter = requestFilter;
     }
     
-    public ChannelPipelineFactory getRelayPipelineFactory(
+    public ChannelPipelineFactory getRelayPipelineFactory(final Route route, 
         final HttpRequest httpRequest, final Channel browserToProxyChannel,
         final RelayListener relayListener) {
 	
+        // TODO: fix this to work with route
         String hostAndPort = chainProxyManager == null
             ? null : chainProxyManager.getChainProxy(httpRequest);
         if (hostAndPort == null) {
             hostAndPort = ProxyUtils.parseHostAndPort(httpRequest);
         }
         
-        return new DefaultRelayPipelineFactory(hostAndPort, httpRequest, 
-            relayListener, browserToProxyChannel, channelGroup, responseFilters, 
+        return new DefaultRelayPipelineFactory(route, httpRequest, 
+            relayListener, browserToProxyChannel, channelGroup, rewriter, responseFilters, 
             requestFilter, chainProxyManager);
     }
     

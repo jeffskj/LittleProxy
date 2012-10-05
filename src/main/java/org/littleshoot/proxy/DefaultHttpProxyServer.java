@@ -39,6 +39,10 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final ServerBootstrap serverBootstrap;
 
     private final HttpResponseFilters responseFilters;
+
+    private final RequestRouter router;
+    
+    private final RequestRewriter rewriter;
     
     /**
      * Creates a new proxy server.
@@ -63,7 +67,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
      */
     public DefaultHttpProxyServer(final int port, 
         final HttpResponseFilters responseFilters) {
-        this(port, responseFilters, null, null, null);
+        this(port, responseFilters, null, null, null, null, null);
     }
     
     /**
@@ -91,7 +95,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     public DefaultHttpProxyServer(final int port,
         final HttpRequestFilter requestFilter,
         final HttpResponseFilters responseFilters) {
-        this(port, responseFilters, null, null, requestFilter);
+        this(port, responseFilters, null, null, requestFilter, null, null);
     }
     
     /**
@@ -110,19 +114,23 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     public DefaultHttpProxyServer(final int port, 
         final HttpResponseFilters responseFilters,
         final ChainProxyManager chainProxyManager, final KeyStoreManager ksm,
-        final HttpRequestFilter requestFilter) {
+        final HttpRequestFilter requestFilter,
+        final RequestRouter router, final RequestRewriter rewriter) {
         this.port = port;
         this.responseFilters = responseFilters;
         this.ksm = ksm;
         this.requestFilter = requestFilter;
         this.chainProxyManager = chainProxyManager;
+        this.router = router;
+        this.rewriter = rewriter;
+        
         Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
             public void uncaughtException(final Thread t, final Throwable e) {
                 log.error("Uncaught throwable", e);
             }
         });
         
-        this.serverBootstrap = new ServerBootstrap(
+        serverBootstrap = new ServerBootstrap(
             new NioServerSocketChannelFactory(
                 Executors.newCachedThreadPool(),
                 Executors.newCachedThreadPool()));
@@ -133,13 +141,13 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     }
     
     public void start(final boolean localOnly, final boolean anyAddress) {
-        log.info("Starting proxy on port: "+this.port);
+        log.info("Starting proxy on port: "+port);
         final HttpServerPipelineFactory factory = 
             new HttpServerPipelineFactory(authenticationManager, 
-                this.allChannels, this.chainProxyManager, this.ksm, 
+                allChannels, chainProxyManager, ksm, router, rewriter, 
                 new DefaultRelayPipelineFactoryFactory(chainProxyManager, 
-                    this.responseFilters, this.requestFilter, 
-                    this.allChannels));
+                    responseFilters, requestFilter, rewriter, 
+                    allChannels));
         serverBootstrap.setPipelineFactory(factory);
         
         // Binding only to localhost can significantly improve the security of
@@ -187,11 +195,11 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
     public void addProxyAuthenticationHandler(
         final ProxyAuthorizationHandler pah) {
-        this.authenticationManager.addHandler(pah);
+        authenticationManager.addHandler(pah);
     }
 
     public KeyStoreManager getKeyStoreManager() {
-        return this.ksm;
+        return ksm;
     }
 
 }

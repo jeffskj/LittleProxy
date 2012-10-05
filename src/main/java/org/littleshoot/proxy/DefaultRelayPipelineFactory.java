@@ -23,7 +23,7 @@ public class DefaultRelayPipelineFactory implements ChannelPipelineFactory {
         LoggerFactory.getLogger(DefaultRelayPipelineFactory.class);
     private static final Timer TIMER = new HashedWheelTimer();
     
-    private final String hostAndPort;
+    private final Route route;
     private final HttpRequest httpRequest;
     private final RelayListener relayListener;
     private final Channel browserToProxyChannel;
@@ -33,26 +33,29 @@ public class DefaultRelayPipelineFactory implements ChannelPipelineFactory {
     private final ChainProxyManager chainProxyManager;
     private final boolean filtersOff;
     private final HttpResponseFilters responseFilters;
+    private final RequestRewriter rewriter;
 
     
-    public DefaultRelayPipelineFactory(final String hostAndPort, 
+    public DefaultRelayPipelineFactory(final Route route, 
         final HttpRequest httpRequest, final RelayListener relayListener, 
         final Channel browserToProxyChannel,
         final ChannelGroup channelGroup, 
+        final RequestRewriter rewriter,
         final HttpResponseFilters responseFilters, 
         final HttpRequestFilter requestFilter, 
         final ChainProxyManager chainProxyManager) {
-        this.hostAndPort = hostAndPort;
+        this.route = route;
         this.httpRequest = httpRequest;
         this.relayListener = relayListener;
         this.browserToProxyChannel = browserToProxyChannel;
         
         this.channelGroup = channelGroup;
+        this.rewriter = rewriter;
         this.responseFilters = responseFilters;
         this.requestFilter = requestFilter;
         this.chainProxyManager = chainProxyManager;
         
-        this.filtersOff = responseFilters == null;
+        filtersOff = responseFilters == null;
     }
     
 
@@ -81,14 +84,14 @@ public class DefaultRelayPipelineFactory implements ChannelPipelineFactory {
         }
         pipeline.addLast("decoder", decoder);
         
-        LOG.debug("Querying for host and port: {}", hostAndPort);
+        LOG.debug("Querying for host and port: {}", route.getHostAndPort());
         final boolean shouldFilter;
         final HttpFilter filter;
         if (filtersOff) {
             shouldFilter = false;
             filter = null;
         } else {
-            filter = responseFilters.getFilter(hostAndPort);
+            filter = responseFilters.getFilter(route.getHostAndPort());
             if (filter == null) {
                 LOG.info("No filter found");
                 shouldFilter = false;
@@ -117,15 +120,15 @@ public class DefaultRelayPipelineFactory implements ChannelPipelineFactory {
         if (shouldFilter) {
             LOG.info("Creating relay handler with filter");
             handler = new HttpRelayingHandler(browserToProxyChannel, 
-                channelGroup, filter, relayListener, hostAndPort);
+                channelGroup, filter, relayListener, route.getHostAndPort());
         } else {
             LOG.info("Creating non-filtering relay handler");
             handler = new HttpRelayingHandler(browserToProxyChannel, 
-                channelGroup, relayListener, hostAndPort);
+                channelGroup, relayListener, route.getHostAndPort());
         }
         
         final ProxyHttpRequestEncoder encoder = 
-            new ProxyHttpRequestEncoder(handler, requestFilter, 
+            new ProxyHttpRequestEncoder(handler, requestFilter, rewriter, route,
                 chainProxyManager != null
                 && chainProxyManager.getChainProxy(httpRequest) != null);
         pipeline.addLast("encoder", encoder);

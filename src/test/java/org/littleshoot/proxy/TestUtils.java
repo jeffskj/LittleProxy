@@ -1,5 +1,13 @@
 package org.littleshoot.proxy;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.http.HttpHost;
 import org.apache.http.client.HttpClient;
 import org.apache.http.conn.params.ConnRoutePNames;
@@ -8,11 +16,6 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 
 public class TestUtils {
 
@@ -28,6 +31,13 @@ public class TestUtils {
         proxyServer.start(true, true);
         return proxyServer;
     }
+    
+    public static HttpProxyServer startProxyServer(int port, RequestRouter router, RequestRewriter rewriter) {
+        final DefaultHttpProxyServer proxyServer = new DefaultHttpProxyServer(port, null, null, null, null, router, rewriter);
+        proxyServer.start(true, true);
+        return proxyServer;
+    }
+
 
     /**
      *  Creates and starts a proxy server that listens on given port.
@@ -43,7 +53,7 @@ public class TestUtils {
 
             public void onCommunicationError(String hostAndPort) {
             }
-        }, null, null);
+        }, null, null, null, null);
         proxyServer.start(true, true);
         return proxyServer;
     }
@@ -58,9 +68,12 @@ public class TestUtils {
      */
     public static Server startWebServer(int port) throws Exception {
         final Server httpServer = new Server(port);
+        httpServer.setAttribute("requests", new ArrayList<String>());
         httpServer.setHandler(new AbstractHandler() {
             public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
                 response.setStatus(HttpServletResponse.SC_OK);
+                System.out.println("received request on URI: " + request.getRequestURI());
+                getRequests(httpServer).add(request.getRequestURI());
                 baseRequest.setHandled(true);
             }
         });
@@ -68,6 +81,11 @@ public class TestUtils {
         return httpServer;
     }
 
+    @SuppressWarnings("unchecked")
+    public static List<String> getRequests(Server server) {
+        return ((List<String>) server.getAttribute("requests"));
+    }
+    
     /**
      * Creates instance HttpClient that is configured to use proxy server.
      * The proxy server should run on localhost and given port

@@ -61,9 +61,12 @@ public class HttpServerPipelineFactory implements ChannelPipelineFactory,
 
     //private boolean useJmx;
     
+    private final RequestRouter router;
+    private final RequestRewriter rewriter;
     private final RelayPipelineFactoryFactory relayPipelineFactoryFactory;
     
     private static final Timer TIMER = new HashedWheelTimer();
+
 
     /**
      * Creates a new pipeline factory with the specified class for processing
@@ -80,12 +83,15 @@ public class HttpServerPipelineFactory implements ChannelPipelineFactory,
         final ProxyAuthorizationManager authorizationManager, 
         final ChannelGroup channelGroup, 
         final ChainProxyManager chainProxyManager, final KeyStoreManager ksm,
+        final RequestRouter router, final RequestRewriter rewriter,
         final RelayPipelineFactoryFactory relayPipelineFactoryFactory) {
     	
-    	this.relayPipelineFactoryFactory = relayPipelineFactoryFactory;
+    	this.router = router;
+        this.rewriter = rewriter;
+        this.relayPipelineFactoryFactory = relayPipelineFactoryFactory;
     	
         log.info("Creating server with keystore manager: {}", ksm);
-        this.authenticationManager = authorizationManager;
+        authenticationManager = authorizationManager;
         this.channelGroup = channelGroup;
         this.chainProxyManager = chainProxyManager;
         this.ksm = ksm;
@@ -147,9 +153,9 @@ public class HttpServerPipelineFactory implements ChannelPipelineFactory,
         final ChannelPipeline pipeline = pipeline();
 
         log.info("Accessing pipeline");
-        if (this.ksm != null) {
+        if (ksm != null) {
             log.info("Adding SSL handler");
-            final SslContextFactory scf = new SslContextFactory(this.ksm);
+            final SslContextFactory scf = new SslContextFactory(ksm);
             final SSLEngine engine = scf.getServerContext().createSSLEngine();
             engine.setUseClientMode(false);
             pipeline.addLast("ssl", new SslHandler(engine));
@@ -169,19 +175,19 @@ public class HttpServerPipelineFactory implements ChannelPipelineFactory,
         */
 
         final HttpRequestHandler httpRequestHandler = 
-            new HttpRequestHandler(this.cacheManager, authenticationManager,
-            this.channelGroup, this.clientSocketChannelFactory,
-            this.chainProxyManager, relayPipelineFactoryFactory);
+            new HttpRequestHandler(cacheManager, authenticationManager,
+            channelGroup, clientSocketChannelFactory,
+            chainProxyManager, router, rewriter, relayPipelineFactoryFactory);
         
         pipeline.addLast("idle", new IdleStateHandler(TIMER, 0, 0, 70));
         //pipeline.addLast("idleAware", new IdleAwareHandler("Client-Pipeline"));
         pipeline.addLast("idleAware", new IdleRequestHandler(httpRequestHandler));
         pipeline.addLast("handler", httpRequestHandler);
-        this.numHandlers++;
+        numHandlers++;
         return pipeline;
     }
 
     public int getNumRequestHandlers() {
-        return this.numHandlers;
+        return numHandlers;
     }
 }

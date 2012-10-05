@@ -20,6 +20,8 @@ public class ProxyHttpRequestEncoder extends HttpRequestEncoder {
     private final HttpRequestFilter requestFilter;
     private final boolean keepProxyFormat;
     private final boolean transparent;
+    private final RequestRewriter rewriter;
+    private final Route route;
 
     /**
      * Creates a new request encoder.
@@ -29,7 +31,7 @@ public class ProxyHttpRequestEncoder extends HttpRequestEncoder {
      * and response pair.
      */
     public ProxyHttpRequestEncoder(final HttpRelayingHandler handler) {
-        this(handler, null, false, false);
+        this(handler, null, null, null, false, false);
     }
     
     /**
@@ -43,8 +45,10 @@ public class ProxyHttpRequestEncoder extends HttpRequestEncoder {
      */
     public ProxyHttpRequestEncoder(final HttpRelayingHandler handler, 
         final HttpRequestFilter requestFilter, 
+        final RequestRewriter rewriter,
+        final Route route,
         final boolean keepProxyFormat) {
-        this(handler, requestFilter, keepProxyFormat, false);
+        this(handler, requestFilter, rewriter, route, keepProxyFormat, false);
     }
     
     /**
@@ -60,17 +64,22 @@ public class ProxyHttpRequestEncoder extends HttpRequestEncoder {
      * proxy rules.
      */
     public ProxyHttpRequestEncoder(final HttpRelayingHandler handler, 
-        final HttpRequestFilter requestFilter, 
+        final HttpRequestFilter requestFilter,
+        final RequestRewriter rewriter,
+        final Route route,
         final boolean keepProxyFormat,
         final boolean transparent) {
 	
-        this.relayingHandler = handler;
+        relayingHandler = handler;
         this.requestFilter = requestFilter;
+        this.rewriter = rewriter;
+        this.route = route;
         this.keepProxyFormat = keepProxyFormat;
         this.transparent = transparent;
     }
 
     @Override
+    //TODO: in this method is where we can rewrite the request
     protected Object encode(final ChannelHandlerContext ctx, 
         final Channel channel, final Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
@@ -80,18 +89,22 @@ public class ProxyHttpRequestEncoder extends HttpRequestEncoder {
             // browser, so we give it the original and copy the original
             // to modify it just before writing it on the wire.
             final HttpRequest request = (HttpRequest) msg;
-            this.relayingHandler.requestEncoded(request);
+            relayingHandler.requestEncoded(request);
             
             // Check if we are running in proxy chain mode and modify request 
             // accordingly.
-            final HttpRequest toSend;
+            HttpRequest toSend;
             if (transparent) {
                 toSend = request;
             } else {
                 toSend = ProxyUtils.copyHttpRequest(request, keepProxyFormat);
             }
-            if (this.requestFilter != null) {
-                this.requestFilter.filter(toSend);
+            if (requestFilter != null) {
+                requestFilter.filter(toSend);
+            }
+            
+            if (rewriter != null) {
+                toSend = rewriter.rewrite(toSend, route);
             }
             //LOG.info("Writing modified request: {}", httpRequestCopy);
             return super.encode(ctx, channel, toSend);
