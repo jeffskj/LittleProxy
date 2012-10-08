@@ -68,8 +68,6 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler implements 
 
     private final AtomicInteger responsesReceived = new AtomicInteger(0);
 
-    private final ProxyAuthorizationManager authorizationManager;
-
     private final Set<String> answeredRequests = new HashSet<String>();
     private final Set<String> unansweredRequests = new HashSet<String>();
 
@@ -105,13 +103,10 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler implements 
      * @param router
      * @param relayPipelineFactoryFactory The relay pipeline factory.
      */
-    public HttpRequestHandler(ProxyConfig config,
-            final ProxyAuthorizationManager authorizationManager, 
-            final ChannelGroup channelGroup,
+    public HttpRequestHandler(ProxyConfig config, final ChannelGroup channelGroup,
             final ClientSocketChannelFactory clientChannelFactory,
             final RelayPipelineFactoryFactory relayPipelineFactoryFactory) {
         this.config = config;
-        this.authorizationManager = authorizationManager;
         this.channelGroup = channelGroup;
         this.clientChannelFactory = clientChannelFactory;
         this.relayPipelineFactoryFactory = relayPipelineFactoryFactory;
@@ -212,10 +207,6 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler implements 
         unansweredRequestCount.incrementAndGet();
 
         log.info("Got request: {} on channel: " + inboundChannel, request);
-        if (authorizationManager != null && !authorizationManager.handleProxyAuthorization(request, ctx)) {
-            log.info("Not authorized!!");
-            return;
-        }
 
         // TODO: allow determination of route here (dynamic host:port selection)
         // figure out how to pass matching context through to Encoder

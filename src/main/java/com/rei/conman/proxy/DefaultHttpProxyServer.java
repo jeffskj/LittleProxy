@@ -24,8 +24,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final ChannelGroup allChannels = new DefaultChannelGroup("HTTP-Proxy-Server");
 
     private final ServerBootstrap serverBootstrap;
-
-    private final ProxyAuthorizationManager authenticationManager = new DefaultProxyAuthorizationManager();
     private final ProxyConfig config;
 
     /**
@@ -56,7 +54,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
     public void start(final boolean localOnly, final boolean anyAddress) {
         log.info("Starting proxy on port: " + config.port());
-        final HttpServerPipelineFactory factory = new HttpServerPipelineFactory(authenticationManager, allChannels, config, 
+        final HttpServerPipelineFactory factory = new HttpServerPipelineFactory(allChannels, config, 
                new DefaultRelayPipelineFactoryFactory(config, allChannels));
         serverBootstrap.setPipelineFactory(factory);
 
@@ -99,9 +97,5 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         future.awaitUninterruptibly(6 * 1000);
         serverBootstrap.releaseExternalResources();
         log.info("Done shutting down proxy");
-    }
-
-    public void addProxyAuthenticationHandler(final ProxyAuthorizationHandler pah) {
-        authenticationManager.addHandler(pah);
     }
 }

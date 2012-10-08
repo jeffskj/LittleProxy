@@ -25,14 +25,4 @@ public interface HttpProxyServer {
      * This is the default.
      */
     void start(boolean localOnly, boolean anyAddress);
-
-    /**
-     * Adds a new handler for proxy authentication. Handlers are called in the
-     * order they're added. If one handler accepts the user's credentials, it
-     * passes them on to the next handler.
-     * 
-     * @param pah The new authentication handler.
-     */
-    void addProxyAuthenticationHandler(ProxyAuthorizationHandler pah);
-    
 }

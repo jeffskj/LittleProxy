@@ -35,9 +35,6 @@ public class HttpServerPipelineFactory implements ChannelPipelineFactory, AllCon
 
     private static final Logger log = LoggerFactory.getLogger(HttpServerPipelineFactory.class);
 
-    private static final boolean CACHE_ENABLED = false;
-
-    private final ProxyAuthorizationManager authenticationManager;
     private final ChannelGroup channelGroup;
 
     private final ClientSocketChannelFactory clientSocketChannelFactory = new NioClientSocketChannelFactory(
@@ -60,15 +57,13 @@ public class HttpServerPipelineFactory implements ChannelPipelineFactory, AllCon
      * @param ksm The KeyStore manager.
      * @param relayPipelineFactoryFactory The relay pipeline factory factory.
      */
-    public HttpServerPipelineFactory(final ProxyAuthorizationManager authorizationManager,
-            final ChannelGroup channelGroup, ProxyConfig config,
+    public HttpServerPipelineFactory(final ChannelGroup channelGroup, ProxyConfig config,
             final RelayPipelineFactoryFactory relayPipelineFactoryFactory) {
 
         this.config = config;
         this.relayPipelineFactoryFactory = relayPipelineFactoryFactory;
 
         log.info("Creating server with keystore manager: {}", config.keyStoreManager());
-        authenticationManager = authorizationManager;
         this.channelGroup = channelGroup;
 
         if (config.useJmx()) {
@@ -121,8 +116,8 @@ public class HttpServerPipelineFactory implements ChannelPipelineFactory, AllCon
         pipeline.addLast("decoder", new HttpRequestDecoder(8192, 8192 * 2, 8192 * 2));
         pipeline.addLast("encoder", new ProxyHttpResponseEncoder(config.cacheManager()));
 
-        final HttpRequestHandler httpRequestHandler = new HttpRequestHandler(config, authenticationManager,
-                channelGroup, clientSocketChannelFactory, relayPipelineFactoryFactory);
+        final HttpRequestHandler httpRequestHandler = new HttpRequestHandler(config, channelGroup,
+                clientSocketChannelFactory, relayPipelineFactoryFactory);
 
         pipeline.addLast("idle", new IdleStateHandler(TIMER, 0, 0, 70));
         // pipeline.addLast("idleAware", new IdleAwareHandler("Client-Pipeline"));
