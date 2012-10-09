@@ -7,7 +7,7 @@ import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.rei.conman.proxy.route.Route;
+import com.rei.conman.route.Destination;
 
 /**
  * Request encoder for the proxy. This is necessary because we need to have access to the most
@@ -17,7 +17,7 @@ public class ProxyHttpRequestEncoder extends HttpRequestEncoder {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProxyHttpRequestEncoder.class);
     private final HttpRelayingHandler relayingHandler;
-    private final Route route;
+    private final Destination destination;
     private final ProxyConfig config;
 
     /**
@@ -27,10 +27,10 @@ public class ProxyHttpRequestEncoder extends HttpRequestEncoder {
      *            to synchronize caching rules for each request and response pair.
      * @param requestFilter The filter for requests.
      */
-    public ProxyHttpRequestEncoder(final HttpRelayingHandler handler, ProxyConfig config, final Route route) {
+    public ProxyHttpRequestEncoder(final HttpRelayingHandler handler, ProxyConfig config, final Destination destination) {
         relayingHandler = handler;
         this.config = config;
-        this.route = route;
+        this.destination = destination;
     }
 
     @Override
@@ -51,7 +51,7 @@ public class ProxyHttpRequestEncoder extends HttpRequestEncoder {
             }
 
             if (config.requestRewriter() != null) {
-                toSend = config.requestRewriter().rewrite(toSend, route);
+                toSend = config.requestRewriter().rewrite(toSend, destination);
             }
             // LOG.info("Writing modified request: {}", httpRequestCopy);
             return super.encode(ctx, channel, toSend);

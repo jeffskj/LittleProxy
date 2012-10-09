@@ -5,7 +5,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
-import com.rei.conman.proxy.route.Route;
+import com.rei.conman.route.Destination;
 
 public class DefaultRelayPipelineFactoryFactory implements RelayPipelineFactoryFactory {
 
@@ -17,10 +17,10 @@ public class DefaultRelayPipelineFactoryFactory implements RelayPipelineFactoryF
         this.channelGroup = channelGroup;
     }
 
-    public ChannelPipelineFactory getRelayPipelineFactory(final Route route, final HttpRequest httpRequest,
+    public ChannelPipelineFactory getRelayPipelineFactory(final Destination destination, final HttpRequest httpRequest,
             final Channel browserToProxyChannel, final RelayListener relayListener) {
 
-        return new DefaultRelayPipelineFactory(route, httpRequest, relayListener, browserToProxyChannel, channelGroup,
+        return new DefaultRelayPipelineFactory(destination, httpRequest, relayListener, browserToProxyChannel, channelGroup,
                 config);
     }
 

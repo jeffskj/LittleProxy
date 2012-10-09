@@ -8,15 +8,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 
-import net.sf.ehcache.Cache;
-import net.sf.ehcache.CacheManager;
-import net.sf.ehcache.Element;
-
 import org.apache.commons.lang.StringUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -24,7 +18,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.rei.conman.proxy.ProxyConstants;
 import com.rei.conman.proxy.ProxyUtils;
 
 /**
@@ -33,7 +26,7 @@ import com.rei.conman.proxy.ProxyUtils;
 public class DefaultProxyCacheManager implements ProxyCacheManager {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
-    private final CacheManager cacheManager = new CacheManager();
+//    private final CacheManager cacheManager = new CacheManager();
     
     private static final boolean CACHE_ENABLED = false;
     
@@ -53,26 +46,26 @@ public class DefaultProxyCacheManager implements ProxyCacheManager {
      * Creates a new cache manager.
      */
     public DefaultProxyCacheManager() {
-        this.cacheManager.addCache(ProxyConstants.CACHE);
-        this.cacheManager.addCache(ProxyConstants.CHUNKS_CACHE);
-        this.cacheManager.addCache(ProxyConstants.CHUNK_CACHE);
+//        this.cacheManager.addCache(ProxyConstants.CACHE);
+//        this.cacheManager.addCache(ProxyConstants.CHUNKS_CACHE);
+//        this.cacheManager.addCache(ProxyConstants.CHUNK_CACHE);
     }
 
     public boolean returnCacheHit(final HttpRequest httpRequest, 
         final Channel channel) {
         final String uri = ProxyUtils.cacheUri(httpRequest);
-        final Cache cache = this.cacheManager.getCache(ProxyConstants.CACHE);
-        final Element elem = cache.get(uri);
-        if (elem != null) {
-            log.info("Found element in cache for URI: {}", uri);
-            final CachedHttpResponse cached = 
-                (CachedHttpResponse) elem.getObjectValue();
-            final ChannelFutureListener cfl = cached.getChannelFutureListener();
-            final ChannelFuture cf = channel.write(cached.getChannelBuffer());
-            cf.addListener(cfl);
-            log.info("Wrote response from cache!!");
-            return true;
-        }
+//        final Cache cache = this.cacheManager.getCache(ProxyConstants.CACHE);
+//        final Element elem = cache.get(uri);
+//        if (elem != null) {
+//            log.info("Found element in cache for URI: {}", uri);
+//            final CachedHttpResponse cached = 
+//                (CachedHttpResponse) elem.getObjectValue();
+//            final ChannelFutureListener cfl = cached.getChannelFutureListener();
+//            final ChannelFuture cf = channel.write(cached.getChannelBuffer());
+//            cf.addListener(cfl);
+//            log.info("Wrote response from cache!!");
+//            return true;
+//        }
         /*
         final Cache chunkedCache = 
             this.cacheManager.getCache(ProxyConstants.CHUNKS_CACHE);

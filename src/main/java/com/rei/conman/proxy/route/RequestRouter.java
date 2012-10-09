@@ -2,6 +2,8 @@ package com.rei.conman.proxy.route;
 
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
+import com.rei.conman.route.Destination;
+
 public interface RequestRouter {
-    Route determineRoute(HttpRequest request);
+    Destination determineDestination(HttpRequest request);
 }

@@ -42,7 +42,8 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.rei.conman.proxy.route.Route;
+import com.rei.conman.route.Destination;
+import com.rei.conman.route.TargetSystem;
 
 /**
  * Class for handling all HTTP requests from the browser to the proxy. Note this class only ever
@@ -210,16 +211,19 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler implements 
 
         // TODO: allow determination of route here (dynamic host:port selection)
         // figure out how to pass matching context through to Encoder
-        Route route = null;
+        
+        Destination destination = null;
 
-        if (route == null && config.requestRouter() != null) {
-            route = config.requestRouter().determineRoute(request);
+        if (destination == null && config.requestRouter() != null) {
+            destination = config.requestRouter().determineDestination(request);
         }
 
-        if (route == null) {
-            route = new Route(ProxyUtils.parseHostAndPort(request));
+        if (destination == null) {
+            destination = new PassThroughDestination(ProxyUtils.parseHostAndPort(request), request.getUri());
         }
 
+        TargetSystem targetSystem = destination.getTargetSystem(ProxyUtils.getProtocol(request));
+        
         final class OnConnect {
             public ChannelFuture onConnect(final ChannelFuture cf) {
                 if (request.getMethod() != HttpMethod.CONNECT) {
@@ -244,7 +248,7 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler implements 
 
         final OnConnect onConnect = new OnConnect();
 
-        final ChannelFuture curFuture = getChannelFuture(route);
+        final ChannelFuture curFuture = getChannelFuture(targetSystem);
         if (curFuture != null) {
             log.info("Using existing connection...");
 
@@ -269,7 +273,7 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler implements 
             final ChannelFuture cf;
             ctx.getChannel().setReadable(false);
             try {
-                cf = newChannelFuture(request, inboundChannel, route);
+                cf = newChannelFuture(request, inboundChannel, destination, targetSystem);
             } catch (final UnknownHostException e) {
                 log.warn("Could not resolve host?", e);
                 return;
@@ -323,7 +327,7 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler implements 
                 }
             }
 
-            cf.addListener(new LocalChannelFutureListener(route.getHostAndPort()));
+            cf.addListener(new LocalChannelFutureListener(targetSystem.getHostAndPort()));
         }
 
         if (request.isChunked()) {
@@ -347,9 +351,9 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler implements 
         }
     }
 
-    private ChannelFuture getChannelFuture(final Route route) {
+    private ChannelFuture getChannelFuture(TargetSystem targetSystem) {
         synchronized (externalHostsToChannelFutures) {
-            final Queue<ChannelFuture> futures = externalHostsToChannelFutures.get(route.getHostAndPort());
+            final Queue<ChannelFuture> futures = externalHostsToChannelFutures.get(targetSystem.getHostAndPort());
             if (futures == null) {
                 return null;
             }
@@ -362,7 +366,7 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler implements 
                 // In this case, the future successfully connected at one
                 // time, but we're no longer connected. We need to remove the
                 // channel and open a new one.
-                removeProxyToWebConnection(route.getHostAndPort());
+                removeProxyToWebConnection(targetSystem.getHostAndPort());
                 return null;
             }
             return cf;
@@ -402,7 +406,7 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler implements 
     }
 
     private ChannelFuture newChannelFuture(final HttpRequest httpRequest, final Channel browserToProxyChannel,
-            Route route) throws UnknownHostException {
+            Destination destination, TargetSystem targetSystem) throws UnknownHostException {
         // Configure the client.
         final ClientBootstrap cb = new ClientBootstrap(clientChannelFactory);
 
@@ -420,13 +424,13 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler implements 
                 }
             };
         } else {
-            cpf = relayPipelineFactoryFactory.getRelayPipelineFactory(route, httpRequest, browserToProxyChannel, this);
+            cpf = relayPipelineFactoryFactory.getRelayPipelineFactory(destination, httpRequest, browserToProxyChannel, this);
         }
 
         cb.setPipelineFactory(cpf);
         cb.setOption("connectTimeoutMillis", 40 * 1000);
-        log.info("Starting new connection to: {}", route);
-        return cb.connect(new InetSocketAddress(route.getHost(), route.getPort()));
+        log.info("Starting new connection to: {}", targetSystem.getHostAndPort());
+        return cb.connect(new InetSocketAddress(targetSystem.getHost(), targetSystem.getPort()));
     }
 
     @Override

@@ -67,8 +67,8 @@ public class TestUtils {
         httpServer.setAttribute("requests", new ArrayList<String>());
         httpServer.setHandler(new AbstractHandler() {
             public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
-                response.setStatus(HttpServletResponse.SC_OK);
                 System.out.println("received request on URI: " + request.getRequestURI());
+                response.setStatus(HttpServletResponse.SC_OK);
                 getRequests(httpServer).add(request.getRequestURI());
                 baseRequest.setHandled(true);
             }

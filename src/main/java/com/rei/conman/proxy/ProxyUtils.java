@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.rei.conman.proxy.filter.HttpRequestFilter;
+import com.rei.conman.route.Protocol;
 
 /**
  * Utilities for the proxy.
@@ -131,7 +132,11 @@ public class ProxyUtils {
     private ProxyUtils() {
     }
     
-
+    public static Protocol getProtocol(HttpRequest request) {
+        return Protocol.HTTP; //TODO: actually figure out if request is secure
+    }
+    
+    
     /**
      * Strips the host from a URI string. This will turn "http://host.com/path"
      * into "/path".

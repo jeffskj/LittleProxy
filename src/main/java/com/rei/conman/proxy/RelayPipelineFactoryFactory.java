@@ -4,11 +4,11 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
-import com.rei.conman.proxy.route.Route;
+import com.rei.conman.route.Destination;
 
 public interface RelayPipelineFactoryFactory {
 
-    ChannelPipelineFactory getRelayPipelineFactory(Route route, HttpRequest httpRequest, 
+    ChannelPipelineFactory getRelayPipelineFactory(Destination destination, HttpRequest httpRequest, 
         Channel browserToProxyChannel, RelayListener relayListener);
 
 }
