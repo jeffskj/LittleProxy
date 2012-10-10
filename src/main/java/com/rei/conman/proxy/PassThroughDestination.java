@@ -4,17 +4,16 @@ import com.rei.conman.route.Destination;
 import com.rei.conman.route.Protocol;
 import com.rei.conman.route.RouteTargetType;
 import com.rei.conman.route.TargetSystem;
+import com.rei.conman.route.TargetSystemDefinition;
 
 public class PassThroughDestination implements Destination {
 
     private String url;
-    private TargetSystem targetSystem = new TargetSystem();
+    private TargetSystemDefinition targetSystemDef;
 
-    public PassThroughDestination(String hostAndPort, String uri) {
+    public PassThroughDestination(TargetSystemDefinition targetSystemDef, String uri) {
+        this.targetSystemDef = targetSystemDef;
         url = uri;
-        String[] parts = hostAndPort.split(":");
-        targetSystem.setHost(parts[0]);
-        targetSystem.setPort(Integer.parseInt(parts[1]));
     }
     
     @Override
@@ -29,7 +28,7 @@ public class PassThroughDestination implements Destination {
 
     @Override
     public TargetSystem getTargetSystem(Protocol protocol) {
-        return targetSystem;
+        return targetSystemDef.getTargetForProtocol(protocol);
     }
     
     @Override

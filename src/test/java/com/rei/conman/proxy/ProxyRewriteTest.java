@@ -21,6 +21,7 @@ import com.rei.conman.proxy.route.ConmanRequestRewritingRouter;
 import com.rei.conman.proxy.route.RequestRewriter;
 import com.rei.conman.proxy.route.RequestRouter;
 import com.rei.conman.route.Destination;
+import com.rei.conman.route.RouteTargetType;
 import com.rei.conman.route.TargetSystemDefinition;
 import com.rei.conman.route.internal.Route;
 import com.rei.conman.route.internal.Routes;
@@ -61,7 +62,10 @@ public class ProxyRewriteTest {
     @Test
     public void testProxyConmanRewrite() throws Exception {
         // Given
-        ConmanRequestRewritingRouter conmanRewriter = new ConmanRequestRewritingRouter();
+        TargetSystemDefinition systemDef = new TargetSystemDefinition();
+        systemDef.setHost("localhost");
+        systemDef.setPort(WEB_SERVER_PORT);
+        ConmanRequestRewritingRouter conmanRewriter = new ConmanRequestRewritingRouter(systemDef);
         
         webServer = startWebServer(WEB_SERVER_PORT);
         proxyServer = startProxyServer(PROXY_PORT, conmanRewriter, conmanRewriter);
@@ -72,15 +76,24 @@ public class ProxyRewriteTest {
         targetSystemDefinition.setPort(WEB_SERVER_PORT);
         
         route.setTargetSystemDefinition(targetSystemDefinition);
-        Routes.update(ImmutableSet.of(route));
+        
+        Route route2 = Route.parse("/redir", "/1");
+        route2.setTargetSystemDefinition(targetSystemDefinition);
+        route2.setType(RouteTargetType.PERMANENT_REDIRECT);
+        
+        Routes.update(ImmutableSet.of(route, route2));
         
         // When
         HttpResponse response = httpclient.execute(new HttpGet("http://" + PROXY_HOST_AND_PORT + "/1"));
+        HttpResponse response2 = httpclient.execute(new HttpGet("http://" + PROXY_HOST_AND_PORT + "/redir"));
         
         // Then
         assertEquals(HttpServletResponse.SC_OK, response.getStatusLine().getStatusCode());
+        assertEquals(HttpServletResponse.SC_OK, response2.getStatusLine().getStatusCode());
+        
         assertEquals("/one", getRequests(webServer).get(0));
-
+        assertEquals("/one", getRequests(webServer).get(1));
+        
         webServer.stop();
         proxyServer.stop();
     }

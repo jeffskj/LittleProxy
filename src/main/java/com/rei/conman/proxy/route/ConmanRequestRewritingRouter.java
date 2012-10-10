@@ -5,12 +5,20 @@ import java.net.URISyntaxException;
 
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
+import com.rei.conman.proxy.PassThroughDestination;
 import com.rei.conman.route.Destination;
+import com.rei.conman.route.TargetSystemDefinition;
 import com.rei.conman.route.internal.MatchedRoute;
 import com.rei.conman.route.internal.Routes;
 
 public class ConmanRequestRewritingRouter implements RequestRouter, RequestRewriter {
 
+    private TargetSystemDefinition defaultTargetSystem;
+
+    public ConmanRequestRewritingRouter(TargetSystemDefinition defaultTargetSystem) {
+        this.defaultTargetSystem = defaultTargetSystem;
+    }
+    
     @Override
     public Destination determineDestination(HttpRequest request) {
         try {
@@ -18,7 +26,8 @@ public class ConmanRequestRewritingRouter implements RequestRouter, RequestRewri
             return route.getDestination(); 
         } catch (URISyntaxException e) {
         }
-        return null;
+        
+        return new PassThroughDestination(defaultTargetSystem, request.getUri());
     }
     
     @Override

@@ -36,13 +36,19 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.rei.conman.route.Destination;
+import com.rei.conman.route.Protocol;
+import com.rei.conman.route.RouteTargetType;
 import com.rei.conman.route.TargetSystem;
 
 /**
@@ -208,7 +214,8 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler implements 
         unansweredRequestCount.incrementAndGet();
 
         log.info("Got request: {} on channel: " + inboundChannel, request);
-
+        log.warn("received request on uri: {}", request.getUri());
+        
         // TODO: allow determination of route here (dynamic host:port selection)
         // figure out how to pass matching context through to Encoder
         
@@ -218,11 +225,25 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler implements 
             destination = config.requestRouter().determineDestination(request);
         }
 
-        if (destination == null) {
-            destination = new PassThroughDestination(ProxyUtils.parseHostAndPort(request), request.getUri());
-        }
+        Protocol protocol = ProxyUtils.getProtocol(request);
+        TargetSystem targetSystem = destination.getTargetSystem(protocol);
 
-        TargetSystem targetSystem = destination.getTargetSystem(ProxyUtils.getProtocol(request));
+        if (destination.getForcedProtocol() != null && destination.getForcedProtocol() != protocol) {
+            //TODO: deal with forced protocol redirects
+        }
+        
+        if (destination.getType() != RouteTargetType.FORWARD) {
+            
+            HttpResponseStatus status = destination.getType() == RouteTargetType.PERMANENT_REDIRECT ? 
+                    HttpResponseStatus.MOVED_PERMANENTLY : HttpResponseStatus.FOUND;
+            
+            HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+            response.setHeader("Location", destination.getResolvedUrl());
+            inboundChannel.write(response);
+            
+            //redirected
+            return;
+        }
         
         final class OnConnect {
             public ChannelFuture onConnect(final ChannelFuture cf) {
